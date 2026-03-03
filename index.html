@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LM Consig - Reserva</title>
+    <meta name="theme-color" content="#2196F3"/>
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <link rel="manifest" href="manifest.json">
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
+        }
+
+        /* TELA DE INSTALAÇÃO E SUCESSO (SPLASH SCREEN) */
+        #installOverlay {
+            display: none; 
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+            color: white;
+            z-index: 20000;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .logo-container {
+            margin-bottom: 25px;
+        }
+
+        .logo-container img {
+            width: 100px;
+            height: 100px;
+            border-radius: 20px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+            background: white;
+            padding: 10px;
+        }
+
+        h1 { font-size: 24px; margin-bottom: 15px; font-weight: bold; }
+        p { font-size: 16px; margin-bottom: 30px; max-width: 320px; line-height: 1.5; opacity: 0.95; }
+
+        /* BOTÕES */
+        .btn-main {
+            background-color: #ffffff;
+            color: #1976D2;
+            border: none;
+            padding: 18px 45px;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            text-transform: uppercase;
+            transition: transform 0.2s;
+        }
+
+        .btn-main:active { transform: scale(0.95); }
+
+        .btn-secondary {
+            margin-top: 25px;
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.4);
+            color: white;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            cursor: pointer;
+            opacity: 0.8;
+        }
+
+        /* ESTADOS */
+        #installStatus, #alreadyInstalled { display: none; flex-direction: column; align-items: center; }
+
+        .success-icon {
+            font-size: 60px;
+            background: white;
+            color: #4CAF50;
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 25px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .spinner-white {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-left-color: #ffffff;
+            border-radius: 50%;
+            width: 45px;
+            height: 45px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 25px;
+        }
+
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* CONTEÚDO DO APP (IFRAME) */
+        iframe { border: none; width: 100%; height: 100%; display: block; }
+
+        .loading-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: #ffffff;
+            display: flex; justify-content: center; align-items: center; flex-direction: column; z-index: 15000;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="installOverlay">
+        <div class="logo-container">
+            <img src="icon-192.png" alt="LM Consig" onerror="this.src='https://via.placeholder.com/192/FFFFFF/2196F3?text=LM'">
+        </div>
+        
+        <!-- ESTADO 1: CONVITE PARA INSTALAR -->
+        <div id="initialContent">
+            <h1>LM Consig - Reserva</h1>
+            <p>Clique abaixo para instalar o aplicativo no seu dispositivo e acessar com um clique.</p>
+            <button id="installBtnLarge" class="btn-main">INSTALAR AGORA</button>
+            <br>
+            <button id="skipBtn" class="btn-secondary">Entrar sem instalar</button>
+        </div>
+
+        <!-- ESTADO 2: DURANTE A INSTALAÇÃO -->
+        <div id="installStatus">
+            <div class="spinner-white"></div>
+            <h1>Instalando...</h1>
+            <p>Siga as instruções na tela do seu navegador para concluir a instalação.</p>
+        </div>
+
+        <!-- ESTADO 3: JÁ INSTALADO (FOCO EM UX PARA LEIGOS) -->
+        <div id="alreadyInstalled">
+            <div class="success-icon">✓</div>
+            <h1>Já está instalado!</h1>
+            <p>O aplicativo LM Consig já está pronto para uso no seu computador ou celular.</p>
+            <p style="font-size: 14px; opacity: 0.9;"><b>O que fazer agora?</b><br>Feche esta aba do navegador e procure pelo ícone do sistema na sua Área de Trabalho ou lista de aplicativos.</p>
+            <button id="closeAdviceBtn" class="btn-main" style="background-color: #4CAF50; color: white;">ENTENDI, PODE FECHAR</button>
+            <br>
+            <button id="forceOpenBtn" class="btn-secondary">Acessar pelo navegador mesmo assim</button>
+        </div>
+    </div>
+
+    <div class="loading-screen" id="loadingScreen">
+        <div class="spinner-white" style="border-left-color: #2196F3; border-top-color: rgba(0,0,0,0.1); border-right-color: rgba(0,0,0,0.1); border-bottom-color: rgba(0,0,0,0.1);"></div>
+        <div style="color: #333; font-size: 1.2em;">Carregando...</div>
+    </div>
+
+    <iframe id="appFrame" src="https://script.google.com/macros/s/AKfycbw1O5IXNRp6FOpQlsoUclx_4rn4HHIslnBIEpTCKJMpv0ESS0mpNg3DcJ6p1RFE8Q51/exec" frameborder="0" allowfullscreen></iframe>
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js'); });
+        }
+
+        let deferredPrompt;
+        const installOverlay = document.getElementById('installOverlay');
+        const initialContent = document.getElementById('initialContent');
+        const installStatus = document.getElementById('installStatus');
+        const alreadyInstalled = document.getElementById('alreadyInstalled');
+        
+        const installBtnLarge = document.getElementById('installBtnLarge');
+        const skipBtn = document.getElementById('skipBtn');
+        const closeAdviceBtn = document.getElementById('closeAdviceBtn');
+        const forceOpenBtn = document.getElementById('forceOpenBtn');
+
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+
+        // Lógica de exibição da tela
+        window.addEventListener('beforeinstallprompt', (e) => {
+            if (isStandalone) return;
+            e.preventDefault();
+            deferredPrompt = e;
+            
+            // Se o prompt de instalação estiver disponível, mostramos o convite inicial
+            installOverlay.style.display = 'flex';
+            initialContent.style.display = 'flex';
+            alreadyInstalled.style.display = 'none';
+        });
+
+        // Se o app já estiver instalado, mostramos a tela de "Já Instalado"
+        if (!isStandalone && !window.matchMedia('(display-mode: standalone)').matches) {
+            // Pequeno delay para dar tempo do navegador disparar o beforeinstallprompt se necessário
+            setTimeout(() => {
+                if (!deferredPrompt && !isStandalone) {
+                    // Se não disparou o prompt e não é standalone, pode ser que já esteja instalado ou o navegador não suporte
+                    // Mas para garantir a UX do seu usuário, vamos mostrar a tela de sucesso se ele tentar abrir o link de novo
+                    installOverlay.style.display = 'flex';
+                    initialContent.style.display = 'none';
+                    alreadyInstalled.style.display = 'flex';
+                }
+            }, 1000);
+        }
+
+        installBtnLarge.addEventListener('click', async () => {
+            if (deferredPrompt) {
+                initialContent.style.display = 'none';
+                installStatus.style.display = 'flex';
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    // Após aceitar, mostramos a tela de sucesso final
+                    setTimeout(() => {
+                        installStatus.style.display = 'none';
+                        alreadyInstalled.style.display = 'flex';
+                    }, 2000);
+                } else {
+                    initialContent.style.display = 'flex';
+                    installStatus.style.display = 'none';
+                }
+                deferredPrompt = null;
+            }
+        });
+
+        skipBtn.addEventListener('click', () => { installOverlay.style.display = 'none'; });
+        forceOpenBtn.addEventListener('click', () => { installOverlay.style.display = 'none'; });
+        closeAdviceBtn.addEventListener('click', () => { 
+            alert("Você já pode fechar esta aba do navegador. O ícone do LM Consig está na sua área de trabalho ou lista de aplicativos!");
+        });
+
+        window.addEventListener('appinstalled', () => {
+            installStatus.style.display = 'none';
+            initialContent.style.display = 'none';
+            alreadyInstalled.style.display = 'flex';
+        });
+
+        document.getElementById('appFrame').onload = function() {
+            const loadingScreen = document.getElementById('loadingScreen');
+            loadingScreen.classList.add('hidden');
+            setTimeout(() => loadingScreen.style.display = 'none', 500);
+        };
+    </script>
+</body>
+</html>
