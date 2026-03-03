@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LM Consig - Reserva</title>
+    <meta name="theme-color" content="#2196F3"/>
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <link rel="manifest" href="manifest.json">
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
+        }
+
+        /* TELA DE INSTALAÇÃO (SPLASH SCREEN) */
+        #installOverlay {
+            display: none; /* Escondido por padrão, mostrado via JS */
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+            color: white;
+            z-index: 20000;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .logo-container {
+            margin-bottom: 30px;
+        }
+
+        .logo-container img {
+            width: 120px;
+            height: 120px;
+            border-radius: 20px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+            background: white;
+            padding: 10px;
+        }
+
+        h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        p {
+            font-size: 16px;
+            margin-bottom: 40px;
+            max-width: 300px;
+            line-height: 1.5;
+            opacity: 0.9;
+        }
+
+        #installBtnLarge {
+            background-color: #ffffff;
+            color: #1976D2;
+            border: none;
+            padding: 18px 40px;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        #installBtnLarge:active {
+            transform: scale(0.95);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        #skipBtn {
+            margin-top: 30px;
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.5);
+            color: white;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            cursor: pointer;
+            opacity: 0.7;
+        }
+
+        /* CONTEÚDO DO APP (IFRAME) */
+        iframe {
+            border: none;
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #ffffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            z-index: 15000;
+            transition: opacity 0.5s ease-out;
+        }
+
+        .loading-screen.hidden {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-left-color: #2196F3;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- TELA DE INSTALAÇÃO EM TELA CHEIA -->
+    <div id="installOverlay">
+        <div class="logo-container">
+            <!-- Tenta carregar o seu ícone. Se não existir, mostra um placeholder -->
+            <img src="icon-192.png" alt="LM Consig" onerror="this.src='https://via.placeholder.com/192/FFFFFF/2196F3?text=LM'">
+        </div>
+        <h1>LM Consig - Reserva</h1>
+        <p>Instale nosso aplicativo para uma melhor experiência e acesso rápido direto da sua tela inicial.</p>
+        
+        <button id="installBtnLarge">INSTALAR APLICATIVO AGORA</button>
+        
+        <button id="skipBtn">Continuar no navegador</button>
+    </div>
+
+    <!-- TELA DE CARREGAMENTO -->
+    <div class="loading-screen" id="loadingScreen">
+        <div class="spinner"></div>
+        <div style="color: #333; font-size: 1.2em;">Carregando LM Consig...</div>
+    </div>
+
+    <!-- O SEU SCRIPT DO GOOGLE -->
+    <iframe id="appFrame" src="https://script.google.com/macros/s/AKfycbw1O5IXNRp6FOpQlsoUclx_4rn4HHIslnBIEpTCKJMpv0ESS0mpNg3DcJ6p1RFE8Q51/exec" frameborder="0" allowfullscreen></iframe>
+
+    <script>
+        // 1. Registro do Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(reg => console.log('SW ativo'))
+                    .catch(err => console.log('Erro no SW', err));
+            });
+        }
+
+        // 2. Lógica da Tela de Instalação (PWA)
+        let deferredPrompt;
+        const installOverlay = document.getElementById('installOverlay');
+        const installBtnLarge = document.getElementById('installBtnLarge');
+        const skipBtn = document.getElementById('skipBtn');
+
+        // Detecta se o app já está rodando em modo "Standalone" (instalado)
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            // Se já estiver instalado, não mostra a tela de instalação
+            if (isStandalone) return;
+
+            // Previne o prompt padrão
+            e.preventDefault();
+            deferredPrompt = e;
+            
+            // Mostra a nossa tela cheia de instalação
+            installOverlay.style.display = 'flex';
+        });
+
+        installBtnLarge.addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                console.log(`Escolha: ${outcome}`);
+                deferredPrompt = null;
+                if (outcome === 'accepted') {
+                    installOverlay.style.display = 'none';
+                }
+            }
+        });
+
+        // Botão para quem não quer instalar agora
+        skipBtn.addEventListener('click', () => {
+            installOverlay.style.display = 'none';
+        });
+
+        // Esconde se o app for instalado com sucesso
+        window.addEventListener('appinstalled', () => {
+            installOverlay.style.display = 'none';
+            deferredPrompt = null;
+        });
+
+        // 3. Lógica de Carregamento do iframe
+        document.getElementById('appFrame').onload = function() {
+            const loadingScreen = document.getElementById('loadingScreen');
+            loadingScreen.classList.add('hidden');
+            setTimeout(() => loadingScreen.style.display = 'none', 500);
+        };
+    </script>
+</body>
+</html>
